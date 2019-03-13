@@ -1,63 +1,47 @@
 package com.member.memberapp.service;
 
 import com.member.memberapp.model.Member;
-import org.springframework.beans.BeanUtils;
+import com.member.memberapp.repository.MemberRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
-import java.util.List;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Component
 public class MemberServiceImpl implements MemberService {
 
-    private List<Member> members = new ArrayList<>();
+    private MemberRepository memberRepository;
 
-    public List<Member> getMembers() {
-        return members;
+    @Autowired
+    public MemberServiceImpl(MemberRepository memberRepository) {
+        this.memberRepository = memberRepository;
     }
 
     @Override
-    public Member createMember(Member member) {
-        members.add(member);
-        return member;
+    public Mono<Member> createMember(Member member) {
+        return memberRepository.save(member);
     }
 
     @Override
-    public Member findById(int id) {
-        for (Member m: members) {
-            if(m.getMemberId() == id){
-                return m;
-            }
-        }
-        return null;
+    public Mono<Member> findById(int id) {
+        return memberRepository.findById(id);
     }
 
     @Override
-    public List<Member> findAll() {
-        return members;
+    public Flux<Member> findAll() {
+        return memberRepository.findAll();
     }
 
     @Override
-    public Member update(Member member) {
-        for (Member m : members) {
-            if(m.getMemberId() == member.getMemberId()){
-                BeanUtils.copyProperties(member, m);
-                return m;
-            }
-        }
-        return null;
+    public Mono<Member> update(Member member) {
+        return memberRepository.save(member);
     }
 
     @Override
-    public Member delete(int id) {
-        Member temp = new Member();
-        for (Member m : members) {
-            if(m.getMemberId() == id){
-                BeanUtils.copyProperties(m, temp);
-                members.remove(m);
-                return temp;
-            }
-        }
-        return null;
+    public Mono<Member> delete(int id) {
+        return memberRepository.findById(id)
+                .flatMap(data-> memberRepository.deleteById(id)
+                        .thenReturn(data)
+                );
     }
 }

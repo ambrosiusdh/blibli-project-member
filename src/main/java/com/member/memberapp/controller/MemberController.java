@@ -2,8 +2,13 @@ package com.member.memberapp.controller;
 
 import com.member.memberapp.model.Member;
 import com.member.memberapp.service.MemberServiceImpl;
+import com.member.memberapp.validation.ValidationHelper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 
@@ -11,9 +16,12 @@ import java.util.List;
 public class MemberController {
 
     private MemberServiceImpl memberService;
+    private ValidationHelper validationHelper;
 
-    public MemberController(MemberServiceImpl memberService) {
+    @Autowired
+    public MemberController(MemberServiceImpl memberService, ValidationHelper validationHelper) {
         this.memberService = memberService;
+        this.validationHelper = validationHelper;
     }
 
     @RequestMapping(
@@ -22,27 +30,28 @@ public class MemberController {
             produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
-    public Member createMember(@RequestBody Member member) {
-        memberService.createMember(member);
-        return member;
+    public Mono<Member> createMember(@RequestBody Member member) {
+        return validationHelper.validate(member)
+                .flatMap(data-> memberService.createMember(data))
+                .subscribeOn(Schedulers.elastic());
     }
 
     @RequestMapping(
-            value = "/member/{memberId}",
+            value = "/database/member/{memberId}",
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public Member findById(@PathVariable int memberId) {
+    public Mono<Member> findById(@PathVariable int memberId) {
         return memberService.findById(memberId);
     }
 
     @RequestMapping(
-            value = "/member",
+            value = "/database/member/all",
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public List<Member> findAll() {
-        return memberService.getMembers();
+    public Flux<Member> findAll() {
+        return memberService.findAll();
     }
 
     @RequestMapping(
@@ -51,7 +60,7 @@ public class MemberController {
             produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
-    public Member update(@RequestBody Member member) {
+    public Mono<Member> update(@RequestBody Member member) {
         return memberService.update(member);
     }
 
@@ -60,7 +69,7 @@ public class MemberController {
             method = RequestMethod.DELETE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public Member delete(@PathVariable int memberId) {
+    public Mono<Member> delete(@PathVariable int memberId) {
         return memberService.delete(memberId);
     }
 }
